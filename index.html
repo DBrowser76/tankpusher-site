@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tankpusher Production & Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg-0:#090d16; --bg-1:#0b0f19;
+    --ink:#f3f5f9; --silver:#c7ccdb; --muted:#7d859c;
+    --glass-border: rgba(255,255,255,0.15);
+    --cyan:#3ff0e0; --purple:#9b6bff; --magenta:#ff5fc4; --amber:#ffcf6b; --lime:#c6ff6b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth; scroll-padding-top:88px}
+  body{
+    background:
+      radial-gradient(60vw 60vh at 12% -10%, rgba(63,240,224,.10), transparent 60%),
+      radial-gradient(50vw 50vh at 100% 10%, rgba(155,107,255,.12), transparent 55%),
+      radial-gradient(45vw 45vh at 50% 100%, rgba(255,95,196,.08), transparent 55%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    padding-top:env(safe-area-inset-top,0px);
+    min-height:100%;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk',system-ui,sans-serif}
+  .tech, .label, nav a, .tag, .btn-solid, .btn-outline, .filter-btn{font-family:'Rajdhani',system-ui,sans-serif; letter-spacing:.03em}
+  .label{font-size:.72rem; text-transform:uppercase; color:var(--muted); font-weight:600}
+
+  /* glass tile base */
+  .glass{
+    position:relative; overflow:hidden; border-radius:26px;
+    border:1px solid var(--glass-border);
+    background: rgba(255,255,255,0.035);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 8px 40px -12px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  /* holographic sheen layer */
+  .holo::before{
+    content:''; position:absolute; inset:0; z-index:0; opacity:.5;
+    background: conic-gradient(from 200deg at 30% 20%,
+      var(--cyan), var(--purple), var(--magenta), var(--amber), var(--lime), var(--cyan));
+    filter: blur(40px) saturate(140%);
+    transform: translate3d(0,0,0) rotate(0deg);
+    transition: transform .6s ease, opacity .6s ease;
+  }
+  .holo::after{
+    content:''; position:absolute; inset:0; z-index:1;
+    background: rgba(9,13,22,0.62);
+  }
+  .holo:hover::before{ transform: rotate(35deg) scale(1.15); opacity:.7; }
+  .holo > *{ position:relative; z-index:2; }
+
+  /* shimmer sweep */
+  .shimmer{position:absolute; inset:-2px; z-index:1; pointer-events:none; opacity:0;
+    background:linear-gradient(115deg, transparent 40%, rgba(255,255,255,.18) 50%, transparent 60%);
+    background-size:250% 250%; background-position:-100% -100%;
+    transition:opacity .3s ease;}
+  .glass:hover .shimmer{ opacity:1; animation:sweep 1.1s ease forwards; }
+  @keyframes sweep{ from{background-position:-100% -100%;} to{background-position:100% 100%;} }
+
+  .pill{border-radius:999px; border:1px solid var(--glass-border); background:rgba(255,255,255,.04); backdrop-filter:blur(10px)}
+  .btn-solid{background:linear-gradient(120deg, var(--cyan), var(--purple)); color:#070a12; font-weight:700; transition:filter .2s ease, transform .2s ease}
+  .btn-solid:hover{filter:brightness(1.12); transform:translateY(-1px)}
+  .btn-outline{border:1px solid var(--glass-border); color:var(--ink); background:rgba(255,255,255,.03); transition:all .2s ease}
+  .btn-outline:hover{border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.07)}
+  .tag{font-size:.68rem; border:1px solid var(--glass-border); color:var(--silver); padding:.2rem .55rem; border-radius:999px; background:rgba(255,255,255,.04)}
+  .filter-btn{border:1px solid var(--glass-border); color:var(--muted); border-radius:999px; padding:.4rem 1rem; transition:all .2s ease; background:rgba(255,255,255,.02)}
+  .filter-btn.active{border-color:var(--cyan); color:var(--cyan); background:rgba(63,240,224,.08)}
+  .filter-btn:hover{color:var(--ink)}
+  .work-card.hide{display:none}
+
+  input[type=range]{-webkit-appearance:none; height:2px; background:rgba(255,255,255,.15); border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:16px; height:16px; border-radius:50%; cursor:pointer; margin-top:-7px;
+    background:linear-gradient(120deg, var(--cyan), var(--purple)); box-shadow:0 0 12px rgba(63,240,224,.6)}
+  input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%; border:none; cursor:pointer; background:linear-gradient(120deg, var(--cyan), var(--purple))}
+  .field{background:rgba(255,255,255,.03); border:1px solid var(--glass-border); color:var(--ink); border-radius:14px}
+  .field:focus{outline:none; border-color:var(--cyan)}
+  :focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important; scroll-behavior:auto !important} }
+</style>
+</head>
+<body>
+
+<header class="sticky top-0 z-40 px-4 pt-4">
+  <div class="max-w-7xl mx-auto pill h-16 flex items-center justify-between px-5 md:px-7">
+    <a href="#top" class="display font-semibold text-base md:text-lg tracking-tight">TANKPUSHER <span style="color:var(--cyan)">/</span> PRODUCTION &amp; DESIGN</a>
+    <nav class="hidden lg:flex items-center gap-7 text-sm tech font-medium text-[var(--muted)]">
+      <a href="#studio" class="hover:text-[var(--ink)]">Studio</a>
+      <a href="#apparel" class="hover:text-[var(--ink)]">Custom Apparel</a>
+      <a href="#work" class="hover:text-[var(--ink)]">Creative Portfolio</a>
+      <a href="#print" class="hover:text-[var(--ink)]">Print Services</a>
+      <a href="#contact" class="hover:text-[var(--ink)]">Contact</a>
+    </nav>
+    <div class="hidden md:flex items-center gap-4">
+      <a href="#" class="tech text-sm text-[var(--muted)] hover:text-[var(--ink)]">Log in</a>
+      <a href="#" class="tech text-sm text-[var(--muted)] hover:text-[var(--ink)]">Sign Up</a>
+      <a href="#contact" class="btn-solid text-sm px-4 py-2 rounded-full">Request a Quote</a>
+    </div>
+    <button id="menuBtn" class="lg:hidden text-[var(--ink)] p-2" aria-label="Open menu" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+  <div id="mobileMenu" class="hidden lg:hidden max-w-7xl mx-auto mt-2 pill px-5 py-4 flex flex-col gap-4 text-sm tech text-[var(--muted)]">
+    <a href="#studio">Studio</a>
+    <a href="#apparel">Custom Apparel</a>
+    <a href="#work">Creative Portfolio</a>
+    <a href="#print">Print Services</a>
+    <a href="#contact" class="btn-solid text-center px-4 py-2 rounded-full text-[#070a12]">Request a Quote</a>
+  </div>
+</header>
+
+<section id="top" class="max-w-7xl mx-auto px-5 md:px-8 pt-14 pb-20 grid lg:grid-cols-12 gap-10 items-center">
+  <div class="lg:col-span-7">
+    <div class="label flex items-center gap-2 mb-5"><span class="w-6 h-px" style="background:var(--cyan)"></span>Commercial-grade apparel &amp; print production</div>
+    <h1 class="display text-4xl sm:text-5xl md:text-6xl font-semibold leading-[1.05] tracking-tight max-w-xl">
+      We build the merch your brand actually deserves to wear.
+    </h1>
+    <p class="mt-6 text-[var(--silver)] text-base md:text-lg max-w-lg leading-relaxed">
+      Screen printing, embroidery, DTG, and vector-first identity work, run through a shop built for fast turnaround and press-check precision.
+    </p>
+    <div class="mt-9 flex flex-wrap gap-4">
+      <a href="#work" class="btn-solid px-6 py-3 text-sm rounded-full">Explore Catalog &amp; Drops</a>
+      <a href="#contact" class="btn-outline px-6 py-3 text-sm rounded-full">Custom Order Inquiry</a>
+    </div>
+    <div class="mt-10 flex gap-8 text-sm">
+      <div><div class="display text-2xl font-semibold">72hr</div><div class="label mt-1">rush turnaround</div></div>
+      <div><div class="display text-2xl font-semibold">400 GSM</div><div class="label mt-1">heavyweight blanks</div></div>
+      <div><div class="display text-2xl font-semibold">1–5000</div><div class="label mt-1">unit batch range</div></div>
+    </div>
+  </div>
+
+  <div class="lg:col-span-5">
+    <div class="glass holo p-6 md:p-7">
+      <div class="shimmer"></div>
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <div class="label">Spec Sheet</div>
+          <div class="display text-lg font-semibold mt-2">Drop 04 — Tankpusher Crew</div>
+        </div>
+        <div class="w-3 h-3 rounded-full" style="background:var(--cyan); box-shadow:0 0 10px var(--cyan)"></div>
+      </div>
+      <div class="aspect-square rounded-2xl border border-white/10 flex items-center justify-center mb-5" style="background:rgba(255,255,255,.03)">
+        <div class="w-[85%] h-[85%] flex flex-col items-center justify-center border border-dashed border-white/15 rounded-xl text-center px-4">
+          <span class="display text-3xl font-semibold tracking-tight">TANKPUSHER</span>
+          <span class="text-[var(--muted)] text-xs mt-2">artwork mockup placeholder</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-xs text-[var(--muted)]">
+        <div class="border-t border-white/10 pt-2"><div class="text-[var(--ink)]">Method</div>Screen print, 2-color</div>
+        <div class="border-t border-white/10 pt-2"><div class="text-[var(--ink)]">Blank</div>400 GSM heavyweight</div>
+        <div class="border-t border-white/10 pt-2"><div class="text-[var(--ink)]">Placement</div>Front chest + back</div>
+        <div class="border-t border-white/10 pt-2"><div class="text-[var(--ink)]">Lead time</div>7–10 business days</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="studio" class="py-20">
+  <div class="max-w-7xl mx-auto px-5 md:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-4 mb-10">
+      <h2 class="display text-3xl md:text-4xl font-semibold max-w-md">Four disciplines, one production floor.</h2>
+      <p class="text-[var(--muted)] max-w-sm text-sm">Design and manufacturing under the same roof — fewer handoffs between proof and pallet.</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-5">
+      <div id="apparel" class="glass holo p-6 flex flex-col justify-between lg:col-span-2 lg:row-span-2 min-h-[220px]">
+        <div class="shimmer"></div>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5"><path d="M8 3 4 6v3h3v12h10V9h3V6l-4-3-3 2h-2z"/></svg>
+        <div>
+          <h3 class="display font-semibold text-xl tracking-wide">CUSTOM APPAREL</h3>
+          <p class="text-sm text-[var(--silver)] leading-relaxed mt-2 max-w-xs">Direct-to-garment, screen printing, and embroidery on premium streetwear blanks — sample to full production run.</p>
+        </div>
+      </div>
+      <div class="glass holo p-6 flex flex-col justify-between min-h-[160px]">
+        <div class="shimmer"></div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><path d="M12 3 3 8l9 5 9-5-9-5ZM3 16l9 5 9-5M3 12l9 5 9-5"/></svg>
+        <h3 class="display font-semibold text-base tracking-wide">GRAPHIC DESIGN</h3>
+      </div>
+      <div id="print" class="glass holo p-6 flex flex-col justify-between min-h-[160px]">
+        <div class="shimmer"></div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--magenta)" stroke-width="1.5"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 4v16"/></svg>
+        <h3 class="display font-semibold text-base tracking-wide">COMMERCIAL PRINT</h3>
+      </div>
+      <div class="glass holo p-6 flex flex-col justify-between lg:col-span-2 min-h-[160px]">
+        <div class="shimmer"></div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5"><path d="M3 7h18M3 12h18M3 17h10"/></svg>
+        <div>
+          <h3 class="display font-semibold text-base tracking-wide">PRODUCTION MANAGEMENT</h3>
+          <p class="text-sm text-[var(--silver)] mt-2 max-w-sm">Batch fulfillment, packaging, and sample proofing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="work" class="py-20">
+  <div class="max-w-7xl mx-auto px-5 md:px-8">
+    <div class="flex items-end justify-between flex-wrap gap-6 mb-10">
+      <h2 class="display text-3xl md:text-4xl font-semibold">Featured work.</h2>
+      <div class="flex gap-2 flex-wrap" id="filters">
+        <button class="filter-btn active text-sm" data-filter="all">All</button>
+        <button class="filter-btn text-sm" data-filter="apparel">Apparel</button>
+        <button class="filter-btn text-sm" data-filter="branding">Branding</button>
+        <button class="filter-btn text-sm" data-filter="print">Print</button>
+      </div>
+    </div>
+    <div id="workGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+  </div>
+</section>
+
+<section id="contact" class="py-20">
+  <div class="max-w-7xl mx-auto px-5 md:px-8 grid lg:grid-cols-12 gap-12">
+    <div class="lg:col-span-5">
+      <h2 class="display text-3xl md:text-4xl font-semibold max-w-sm">Tell us what you're building.</h2>
+      <p class="text-[var(--muted)] mt-4 max-w-sm text-sm leading-relaxed">Share the basics and a production lead responds within one business day with pricing tiers and a realistic timeline.</p>
+      <div class="mt-8 space-y-3 text-sm text-[var(--silver)]">
+        <div class="flex gap-3"><span class="w-1.5 h-1.5 mt-2 rounded-full shrink-0" style="background:var(--cyan)"></span>Free proof review before any run starts</div>
+        <div class="flex gap-3"><span class="w-1.5 h-1.5 mt-2 rounded-full shrink-0" style="background:var(--purple)"></span>Volume pricing from 12 units up</div>
+        <div class="flex gap-3"><span class="w-1.5 h-1.5 mt-2 rounded-full shrink-0" style="background:var(--magenta)"></span>Rush production available on request</div>
+      </div>
+    </div>
+
+    <form id="quoteForm" class="lg:col-span-7 glass p-6 md:p-8 space-y-5" style="backdrop-filter:blur(18px)">
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div>
+          <label for="fullName" class="label block mb-1.5">Full Name</label>
+          <input id="fullName" required type="text" class="field w-full px-3.5 py-2.5 text-sm" placeholder="Jordan Lee">
+        </div>
+        <div>
+          <label for="brand" class="label block mb-1.5">Business / Brand Name</label>
+          <input id="brand" type="text" class="field w-full px-3.5 py-2.5 text-sm" placeholder="Optional">
+        </div>
+      </div>
+      <div>
+        <label for="email" class="label block mb-1.5">Email</label>
+        <input id="email" required type="email" class="field w-full px-3.5 py-2.5 text-sm" placeholder="you@brand.com">
+      </div>
+      <div>
+        <span class="label block mb-2">Service</span>
+        <div class="grid grid-cols-3 gap-2" id="serviceGroup">
+          <button type="button" data-service="Apparel" class="svc-btn filter-btn py-2 text-sm active">Apparel</button>
+          <button type="button" data-service="Branding" class="svc-btn filter-btn py-2 text-sm">Branding</button>
+          <button type="button" data-service="Batch Print" class="svc-btn filter-btn py-2 text-sm">Batch Print</button>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between text-sm mb-1.5">
+          <label for="qty" class="label">Estimated Quantity</label>
+          <span id="qtyLabel" class="text-[var(--ink)] tech">50 units</span>
+        </div>
+        <input id="qty" type="range" min="1" max="500" value="50" step="1" class="w-full">
+      </div>
+      <div>
+        <label for="details" class="label block mb-1.5">Project Details</label>
+        <textarea id="details" rows="4" class="field w-full px-3.5 py-2.5 text-sm" placeholder="Garment type, colors, deadline, references..."></textarea>
+      </div>
+      <button type="submit" class="btn-solid w-full py-3 text-sm rounded-full">Send Project Inquiry</button>
+      <p id="formNote" class="text-xs text-[var(--muted)] text-center hidden">Thanks — a production lead will follow up by email shortly.</p>
+    </form>
+  </div>
+</section>
+
+<footer class="py-10" style="padding-bottom:calc(2.5rem + env(safe-area-inset-bottom,0px))">
+  <div class="max-w-7xl mx-auto px-5 md:px-8 pill py-6 flex flex-col md:flex-row items-center justify-between gap-6">
+    <div class="text-sm text-[var(--muted)]">© Tankpusher Production &amp; Design LLC</div>
+    <nav class="flex flex-wrap gap-6 text-sm tech text-[var(--muted)]">
+      <a href="#studio" class="hover:text-[var(--ink)]">Studio</a>
+      <a href="#apparel" class="hover:text-[var(--ink)]">Custom Apparel</a>
+      <a href="#work" class="hover:text-[var(--ink)]">Portfolio</a>
+      <a href="#print" class="hover:text-[var(--ink)]">Print</a>
+      <a href="#contact" class="hover:text-[var(--ink)]">Contact</a>
+    </nav>
+    <div class="flex items-center gap-2 text-sm text-[var(--muted)]">
+      <span class="w-2 h-2 rounded-full" style="background:var(--lime); box-shadow:0 0 8px var(--lime)"></span>Shop floor open — booking new runs
+    </div>
+  </div>
+</footer>
+
+<script>
+  const menuBtn = document.getElementById('menuBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  menuBtn.addEventListener('click', () => {
+    const open = mobileMenu.classList.toggle('hidden');
+    menuBtn.setAttribute('aria-expanded', String(!open));
+  });
+
+  const work = [
+    {name:'Heavyweight Crewneck — Drop 04', cat:'apparel', tags:['400 GSM','Custom Drop']},
+    {name:'Riverside Coffee — Brand Refresh', cat:'branding', tags:['Identity','Vector']},
+    {name:'Overland Fest — Event Banners', cat:'print', tags:['Large Format','Outdoor']},
+    {name:'Embroidered Cap — Union Pack', cat:'apparel', tags:['Embroidery','Small Batch']},
+    {name:'Steelroot Supply Co. — Wordmark', cat:'branding', tags:['Typography','Logo System']},
+    {name:'Foundry Hoodie — Limited Run', cat:'apparel', tags:['400 GSM','Screen Print']},
+    {name:'Night Market — Decal Sheet', cat:'print', tags:['Vinyl','Weatherproof']},
+    {name:'Basecamp Athletics — Full System', cat:'branding', tags:['Identity','Merch Concepts']},
+    {name:'Pallet Run — Retail Packaging', cat:'print', tags:['Collateral','Batch Ready']},
+  ];
+
+  const grid = document.getElementById('workGrid');
+  grid.innerHTML = work.map(w => `
+    <div class="work-card glass holo overflow-hidden" data-cat="${w.cat}">
+      <div class="shimmer"></div>
+      <div class="aspect-[4/3] flex items-center justify-center border-b border-white/10">
+        <span class="text-[var(--muted)] text-xs">mockup placeholder</span>
+      </div>
+      <div class="p-4">
+        <h3 class="font-medium text-sm mb-2">${w.name}</h3>
+        <div class="flex flex-wrap gap-2">${w.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('filters').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('#filters .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const f = btn.dataset.filter;
+    document.querySelectorAll('.work-card').forEach(card => {
+      card.classList.toggle('hide', f !== 'all' && card.dataset.cat !== f);
+    });
+  });
+
+  document.getElementById('serviceGroup').addEventListener('click', e => {
+    const btn = e.target.closest('.svc-btn');
+    if (!btn) return;
+    document.querySelectorAll('.svc-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  const qty = document.getElementById('qty');
+  const qtyLabel = document.getElementById('qtyLabel');
+  qty.addEventListener('input', () => qtyLabel.textContent = qty.value + ' units');
+
+  document.getElementById('quoteForm').addEventListener('submit', e => {
+    e.preventDefault();
+    document.getElementById('formNote').classList.remove('hidden');
+    e.target.querySelector('button[type=submit]').textContent = 'Inquiry Sent';
+  });
+</script>
+</body>
+</html>
